@@ -15,17 +15,15 @@ class State:
         self.state = state
         self.isEnd = False
 
-    def giveReward(self, rewardRate):
+    def rewardFunc(self):
         if self.state == WIN_STATE:
-            return rewardRate
-        elif self.state == LOSE_STATE:
-            return -rewardRate
-        else:
-            return 0
-
-    def isEndFunc(self):
-        if (self.state == WIN_STATE) or (self.state == LOSE_STATE):
             self.isEnd = True
+            return REWARD_RATE
+        elif self.state == LOSE_STATE:
+            self.isEnd = True
+            return -REWARD_RATE
+        else:
+            return -0.01
 
     def nxtPosition(self, action):
 
@@ -46,7 +44,6 @@ class State:
 class Agent:
 
     def __init__(self):
-        self.states = []
         self.actions = ["up", "down", "left", "right"]
         self.State = State()
         self.learningRate = 0.1
@@ -79,39 +76,32 @@ class Agent:
         return State(state=position)
 
     def reset(self):
-        self.states = []
         self.State = State()
 
     def play(self, rounds=10):
         i = 0
         while i < rounds:
-            if self.State.isEnd:
-                reward = self.State.giveReward(REWARD_RATE)
-                finalState = self.states[-1]
-                self.state_values[(self.translateCoords(finalState[0]), self.actions.index(finalState[1]))]
-                print("Game End Reward", reward)
-                for s in reversed(self.states):
-                    reward = self.state_values[(self.translateCoords(s[0]), self.actions.index(s[1]))] + \
-                        self.learningRate * (reward + self.discountFactor * self.maxNextPosition(s[0], s[1])) - \
-                            self.state_values[(self.translateCoords(s[0]), self.actions.index(s[1]))]
-                    self.state_values[(self.translateCoords(s[0]), self.actions.index(s[1]))]  = round(reward, 3)
-                self.reset()
-                i += 1
-            else:
+            if self.State.isEnd == False:
                 action = self.chooseAction()
-                self.states.append((self.State.state, action))
                 print("current position {} action {}".format(
                     self.State.state, action))
+                previousState = self.State.state
                 self.State = self.takeAction(action)
-                self.State.isEndFunc()
+                reward = self.State.rewardFunc()
+                self.state_values[(self.translateCoords(previousState), self.actions.index(action))] = \
+                    round(self.state_values[(self.translateCoords(previousState), self.actions.index(action))] + \
+                        self.learningRate * (reward + self.discountFactor * self.maxNextPosition(self.State.state, action) - \
+                            self.state_values[(self.translateCoords(previousState), self.actions.index(action))]), 3)
                 print("nxt state", self.State.state)
                 print("---------------------")
+            else:
+                i += 1
+                self.reset()
 
     def maxNextPosition(self, currentState, action):
         mx_nxt_reward = 0
-        position = self.State.nxtPosition(currentState)
         for move in self.actions:
-            nxt_reward = self.state_values[(self.translateCoords(position), self.actions.index(move))]
+            nxt_reward = self.state_values[(self.translateCoords(currentState), self.actions.index(move))]
             if nxt_reward >= mx_nxt_reward:
                 mx_nxt_reward = nxt_reward
         
@@ -128,7 +118,6 @@ class Agent:
     def showValues(self):
         print('----------------------------------')
         for i in range(BOARD_COLS * BOARD_ROWS):
-            print(str([i]), end = ' ') 
             for j in range(len(self.actions)):
                 print(' | ' + str(self.state_values[(i, j)]), end = ' | ')
             print(' ')
@@ -141,3 +130,4 @@ if __name__ == "__main__":
     ag.play(100)
     print('Frame took {} seconds'.format(time.time()-last_time))
     ag.showValues()
+
