@@ -1,14 +1,12 @@
 import numpy as np
 import time
-import math
 
 BOARD_ROWS = 2
 BOARD_COLS = 2
 WIN_STATE = (1, 1)
 LOSE_STATE = (1, 0)
 START = (0, 0)
-#Colocar um valor bem grande de recompensa, senão vale mais a pena ganhar a pontuação intermediaria.
-REWARD_RATE = 1000
+REWARD_RATE = 0.1
 
 
 class State:
@@ -18,8 +16,6 @@ class State:
         self.isEnd = False
 
     def rewardFunc(self):
-        dist = math.sqrt((self.state[0] - self.state[1])**2 + (WIN_STATE[0] - WIN_STATE[1])**2)
-
         if self.state == WIN_STATE:
             self.isEnd = True
             return REWARD_RATE
@@ -27,7 +23,7 @@ class State:
             self.isEnd = True
             return -REWARD_RATE
         else:
-            return dist
+            return -0.01
 
     def nxtPosition(self, action):
 
@@ -63,9 +59,18 @@ class Agent:
 
         mx_nxt_reward = 0
         action = self.actions[0]
-
+        temp = self.actions.copy()
         if np.random.uniform(0, 1) <= self.greedyValue:
-            action = np.random.choice(self.actions)
+            if self.State.state[0] == 0:
+                temp.remove('up')
+            if self.State.state[1] == 0:
+                temp.remove('left')
+
+            if self.State.state[0] == BOARD_COLS - 1:
+                temp.remove('down')
+            if self.State.state[1] == BOARD_ROWS - 1:
+                temp.remove('right')
+            action = np.random.choice(temp)
         else:
             for move in self.actions:
                 nxt_reward = self.state_values[(self.translateCoords(self.State.state), self.actions.index(move))]
@@ -150,8 +155,7 @@ class Agent:
 if __name__ == "__main__":
     ag = Agent()
     last_time = time.time()
-    ag.train(1000)
+    ag.train(100)
     print('Frame took {} seconds'.format(time.time()-last_time))
     ag.showValues()
     ag.play()
-

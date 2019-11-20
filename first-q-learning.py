@@ -60,7 +60,7 @@ class Agent:
     def chooseAction(self):
 
         mx_nxt_reward = 0
-        action = ""
+        action = self.actions[0]
 
         if np.random.uniform(0, 1) <= self.greedyValue:
             action = np.random.choice(self.actions)
@@ -80,7 +80,7 @@ class Agent:
         self.states = []
         self.State = State()
 
-    def play(self, rounds=10):
+    def train(self, rounds=10):
         i = 0
         while i < rounds:
             if self.State.isEnd:
@@ -111,8 +111,29 @@ class Agent:
             print(' ')
             print('----------------------------------')
 
+    def chooseActionDeterministc(self):
+        mx_nxt_reward = 0
+        action = self.actions[0]
+        for move in self.actions:
+            nxt_reward = self.state_values[self.State.nxtPosition(move)]
+            if nxt_reward >= mx_nxt_reward:
+                action = move
+                mx_nxt_reward = nxt_reward
+
+        return action
+
+    def play(self):
+        while(self.State.state != WIN_STATE):
+            action = self.chooseActionDeterministc()
+            print("current position {} action {}".format(
+                    self.State.state, action))
+            self.State = self.takeAction(action)
+            print("next state ",self.State.state)
+
+        print("End Game")
 
 if __name__ == "__main__":
     ag = Agent()
-    ag.play(1000)
+    ag.train(1000)
     ag.showValues()
+    ag.play()

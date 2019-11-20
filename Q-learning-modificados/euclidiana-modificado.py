@@ -63,9 +63,20 @@ class Agent:
 
         mx_nxt_reward = 0
         action = self.actions[0]
+        temp = self.actions.copy()
 
         if np.random.uniform(0, 1) <= self.greedyValue:
-            action = np.random.choice(self.actions)
+            if self.State.state[0] == 0:
+                temp.remove('up')
+            if self.State.state[1] == 0:
+                temp.remove('left')
+
+            if self.State.state[0] == BOARD_COLS - 1:
+                temp.remove('down')
+            if self.State.state[1] == BOARD_ROWS - 1:
+                temp.remove('right')
+                
+            action = np.random.choice(temp)
         else:
             for move in self.actions:
                 nxt_reward = self.state_values[(self.translateCoords(self.State.state), self.actions.index(move))]

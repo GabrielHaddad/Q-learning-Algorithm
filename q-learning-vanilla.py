@@ -6,7 +6,7 @@ BOARD_COLS = 2
 WIN_STATE = (1, 1)
 LOSE_STATE = (1, 0)
 START = (0, 0)
-REWARD_RATE = 1
+REWARD_RATE = 0.1
 
 
 class State:
