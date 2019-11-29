@@ -6,7 +6,7 @@ BOARD_COLS = 2
 WIN_STATE = (1, 1)
 LOSE_STATE = (1, 0)
 START = (0, 0)
-REWARD_RATE = 0.1
+REWARD_RATE = 1000
 
 
 class State:
@@ -158,7 +158,7 @@ class Agent:
 if __name__ == "__main__":
     ag = Agent()
     last_time = time.time()
-    ag.train(1000)
+    ag.train(10000)
     print('Frame took {} seconds'.format(time.time()-last_time))
     ag.showValues()
     ag.play()

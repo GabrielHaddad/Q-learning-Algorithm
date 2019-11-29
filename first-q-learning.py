@@ -1,11 +1,12 @@
 import numpy as np
+import time
 
 BOARD_ROWS = 2
 BOARD_COLS = 2
 WIN_STATE = (1, 1)
 LOSE_STATE = (1, 0)
 START = (0, 0)
-REWARD_RATE = 0.1
+REWARD_RATE = 10
 
 
 class State:
@@ -134,6 +135,8 @@ class Agent:
 
 if __name__ == "__main__":
     ag = Agent()
-    ag.train(1000)
+    last_time = time.time()
+    ag.train(10)
+    print('Frame took {} seconds'.format(time.time()-last_time))
     ag.showValues()
     ag.play()

@@ -7,8 +7,7 @@ BOARD_COLS = 2
 WIN_STATE = (1, 1)
 LOSE_STATE = (1, 0)
 START = (0, 0)
-#Colocar um valor bem grande de recompensa, senão vale mais a pena ganhar a pontuação intermediaria.
-REWARD_RATE = 1000
+REWARD_RATE = 10
 
 
 class State:
@@ -150,7 +149,7 @@ class Agent:
 if __name__ == "__main__":
     ag = Agent()
     last_time = time.time()
-    ag.train(1000)
+    ag.train(10000)
     print('Frame took {} seconds'.format(time.time()-last_time))
     ag.showValues()
     ag.play()
