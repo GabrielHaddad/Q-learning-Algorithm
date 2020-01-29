@@ -2,12 +2,12 @@ import numpy as np
 import time
 import math
 
-BOARD_ROWS = 2
-BOARD_COLS = 2
-WIN_STATE = (1, 1)
-LOSE_STATE = (1, 0)
+BOARD_ROWS = 5
+BOARD_COLS = 5
+WIN_STATE = (4, 4)
+LOSE_STATE = (4, 0)
 START = (0, 0)
-#Colocar um valor bem grande de recompensa, senão vale mais a pena ganhar a pontuação intermediaria.
+
 REWARD_RATE = 1000
 
 
@@ -26,8 +26,10 @@ class State:
         elif self.state == LOSE_STATE:
             self.isEnd = True
             return -REWARD_RATE
-        else:
+        
+        if dist == 0:
             return dist
+        return 1/dist
 
     def nxtPosition(self, action):
 
@@ -50,7 +52,7 @@ class Agent:
     def __init__(self):
         self.actions = ["up", "down", "left", "right"]
         self.State = State()
-        self.learningRate = 0.1
+        self.learningRate = 0.9
         self.greedyValue = 0.9
         self.discountFactor = 0.9
 
@@ -63,7 +65,6 @@ class Agent:
 
         mx_nxt_reward = 0
         action = self.actions[0]
-
         temp = self.actions.copy()
 
         if np.random.uniform(0, 1) <= self.greedyValue:
@@ -93,13 +94,16 @@ class Agent:
     def reset(self):
         self.State = State()
 
-    def train(self, rounds=10):
+    def train(self):
         i = 0
-        while i < rounds:
+        oldTable = self.state_values.copy()
+        stopCount = 0
+        while True:
             if self.State.isEnd == False:
+                oldTable = self.state_values.copy()
                 action = self.chooseAction()
-                print("current position {} action {}".format(
-                    self.State.state, action))
+                #print("current position {} action {}".format(
+                   # self.State.state, action))
                 previousState = self.State.state
                 self.State = self.takeAction(action)
                 reward = self.State.rewardFunc()
@@ -107,11 +111,17 @@ class Agent:
                     round(self.state_values[(self.translateCoords(previousState), self.actions.index(action))] + \
                         self.learningRate * (reward + self.discountFactor * self.maxNextPosition(self.State.state, action) - \
                             self.state_values[(self.translateCoords(previousState), self.actions.index(action))]), 3)
-                print("nxt state", self.State.state)
-                print("---------------------")
+               # print("nxt state", self.State.state)
+                #print("---------------------")
             else:
                 i += 1
+                if oldTable == self.state_values:
+                    stopCount += 1
+                    if stopCount == 100:
+                        self.reset()
+                        break
                 self.reset()
+        return i
 
     def maxNextPosition(self, currentState, action):
         mx_nxt_reward = 0
@@ -160,10 +170,31 @@ class Agent:
         print("End Game")
 
 if __name__ == "__main__":
-    ag = Agent()
-    last_time = time.time()
-    ag.train(1000)
-    print('Frame took {} seconds'.format(time.time()-last_time))
-    ag.showValues()
+    roundsAVG = []
+    timeAVG = []
+    temp = 0
+    tempTime = 0
+
+    qntRun = 100
+    for i in range(qntRun):
+        ag = Agent()
+        last_time = time.time()
+        roundTemp = ag.train()
+        #print(roundTemp)
+        roundsAVG.append(roundTemp)
+        #print('Frame took {} seconds'.format(time.time()-last_time))
+        timeAVG.append(time.time()-last_time)
+
+    for i in range(len(roundsAVG)):
+        temp += roundsAVG[i]
+        tempTime += timeAVG[i]
+    
+    roundsAVG = temp/qntRun
+    timeAVG = tempTime/qntRun
+
+    print('Average rounds needed to converg: ', roundsAVG)
+    print('Average time needed to converg: ', timeAVG)
+    #ag.showValues()
     ag.play()
+
 

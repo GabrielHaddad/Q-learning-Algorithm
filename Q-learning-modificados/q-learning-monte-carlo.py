@@ -6,7 +6,7 @@ BOARD_COLS = 2
 WIN_STATE = (1, 1)
 LOSE_STATE = (1, 0)
 START = (0, 0)
-REWARD_RATE = 0.1
+REWARD_RATE = 1
 
 
 class State:
@@ -20,8 +20,6 @@ class State:
             return rewardRate
         elif self.state == LOSE_STATE:
             return -rewardRate
-        else:
-            return 0
 
     def isEndFunc(self):
         if (self.state == WIN_STATE) or (self.state == LOSE_STATE):
@@ -49,13 +47,13 @@ class Agent:
         self.states = []
         self.actions = ["up", "down", "left", "right"]
         self.State = State()
-        self.learningRate = 0.1
+        self.learningRate = 0.9
         self.greedyValue = 0.9
-        self.discountFactor = 0.9
+        self.pathReduceReward = 0.1
 
         self.state_values = {}
-        for i in range(BOARD_COLS * BOARD_ROWS):
-            for j in range(len(self.actions)):
+        for i in range(BOARD_ROWS):
+            for j in range(BOARD_COLS):
                 self.state_values[(i, j)] = 0
 
     def chooseAction(self):
@@ -63,7 +61,7 @@ class Agent:
         mx_nxt_reward = 0
         action = self.actions[0]
         temp = self.actions.copy()
-        
+
         if np.random.uniform(0, 1) <= self.greedyValue:
             if self.State.state[0] == 0:
                 temp.remove('up')
@@ -74,11 +72,11 @@ class Agent:
                 temp.remove('down')
             if self.State.state[1] == BOARD_ROWS - 1:
                 temp.remove('right')
-            
+                
             action = np.random.choice(temp)
         else:
             for move in self.actions:
-                nxt_reward = self.state_values[(self.translateCoords(self.State.state), self.actions.index(move))]
+                nxt_reward = self.state_values[self.State.nxtPosition(move)]
                 if nxt_reward >= mx_nxt_reward:
                     action = move
                     mx_nxt_reward = nxt_reward
@@ -92,54 +90,44 @@ class Agent:
         self.states = []
         self.State = State()
 
-    def train(self, rounds=10):
+    def train(self):
         i = 0
-        while i < rounds:
+        stopCount = 0
+        oldTable = self.state_values.copy()
+        while True:
             if self.State.isEnd:
                 reward = self.State.giveReward(REWARD_RATE)
-                finalState = self.states[-1]
-                self.state_values[(self.translateCoords(finalState[0]), self.actions.index(finalState[1]))]
-                print("Game End Reward", reward)
+                self.state_values[self.State.state] = reward
+                #print("Game End Reward", reward)
                 for s in reversed(self.states):
-                    reward = self.state_values[(self.translateCoords(s[0]), self.actions.index(s[1]))] + \
-                        self.learningRate * (reward + self.discountFactor * self.maxNextPosition(s[0], s[1])) - \
-                            self.state_values[(self.translateCoords(s[0]), self.actions.index(s[1]))]
-                    self.state_values[(self.translateCoords(s[0]), self.actions.index(s[1]))]  = round(reward, 3)
-                self.reset()
+                    self.state_values[s] = round(self.state_values[s] + \
+                        self.learningRate * (reward - self.state_values[s]), 3)
+                    reward = reward - self.pathReduceReward
                 i += 1
+                if oldTable == self.state_values:
+                    stopCount += 1
+                    if stopCount == 100:
+                        self.reset()
+                        break
+                else:
+                    stopCount = 0
+                self.reset()
             else:
+                oldTable = self.state_values.copy()
                 action = self.chooseAction()
-                self.states.append((self.State.state, action))
-                print("current position {} action {}".format(
-                    self.State.state, action))
+                self.states.append(self.State.nxtPosition(action))
+                #print("current position {} action {}".format(
+                    #self.State.state, action))
                 self.State = self.takeAction(action)
                 self.State.isEndFunc()
-                print("nxt state", self.State.state)
-                print("---------------------")
-
-    def maxNextPosition(self, currentState, action):
-        mx_nxt_reward = 0
-        position = self.State.nxtPosition(currentState)
-        for move in self.actions:
-            nxt_reward = self.state_values[(self.translateCoords(position), self.actions.index(move))]
-            if nxt_reward >= mx_nxt_reward:
-                mx_nxt_reward = nxt_reward
-        
-        return mx_nxt_reward
-
-    def translateCoords(self, state):
-        k = 0
-        for i in range(BOARD_ROWS):
-            for j in range(BOARD_COLS):
-                if state == (i, j):
-                    return k
-                k += 1
+                #print("nxt state", self.State.state)
+                #print("---------------------")
+        return i
 
     def showValues(self):
         print('----------------------------------')
-        for i in range(BOARD_COLS * BOARD_ROWS):
-            print(str([i]), end = ' ') 
-            for j in range(len(self.actions)):
+        for i in range(BOARD_COLS):
+            for j in range(BOARD_ROWS):
                 print(' | ' + str(self.state_values[(i, j)]), end = ' | ')
             print(' ')
             print('----------------------------------')
@@ -148,7 +136,7 @@ class Agent:
         mx_nxt_reward = 0
         action = self.actions[0]
         for move in self.actions:
-            nxt_reward = self.state_values[(self.translateCoords(self.State.state), self.actions.index(move))]
+            nxt_reward = self.state_values[self.State.nxtPosition(move)]
             if nxt_reward >= mx_nxt_reward:
                 action = move
                 mx_nxt_reward = nxt_reward
@@ -165,11 +153,30 @@ class Agent:
 
         print("End Game")
 
-
 if __name__ == "__main__":
-    ag = Agent()
-    last_time = time.time()
-    ag.train(1000)
-    print('Frame took {} seconds'.format(time.time()-last_time))
+    roundsAVG = []
+    timeAVG = []
+    temp = 0
+    tempTime = 0
+
+    qntRun = 100
+    for i in range(qntRun):
+        ag = Agent()
+        last_time = time.time()
+        roundTemp = ag.train()
+        #print(roundTemp)
+        roundsAVG.append(roundTemp)
+        #print('Frame took {} seconds'.format(time.time()-last_time))
+        timeAVG.append(time.time()-last_time)
+
+    for i in range(len(roundsAVG)):
+        temp += roundsAVG[i]
+        tempTime += timeAVG[i]
+    
+    roundsAVG = temp/qntRun
+    timeAVG = tempTime/qntRun
+
+    print('Average rounds needed to converg: ', roundsAVG)
+    print('Average time needed to converg: ', timeAVG)
     ag.showValues()
     ag.play()
